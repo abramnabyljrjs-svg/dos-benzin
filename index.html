@@ -1,64 +1,99 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>دوس بنزين 🏁 | تسجيل الفرق</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      font-family: Tahoma, Arial, sans-serif;
-      background: linear-gradient(135deg, #101827, #243b55);
-      color: white;
-    }
-    .card {
-      width: 100%;
-      max-width: 440px;
-      padding: 32px 24px;
-      text-align: center;
-      background: #ffffff12;
-      border: 1px solid #ffffff25;
-      border-radius: 24px;
-      box-shadow: 0 15px 45px #0004;
-    }
-    .flag { font-size: 55px; }
-    h1 { margin: 12px 0; font-size: 30px; }
-    p { color: #d8e2f0; line-height: 1.9; }
-    .badge {
-      display: inline-block;
-      padding: 7px 14px;
-      border-radius: 30px;
-      background: #ffffff18;
-      font-size: 14px;
-    }
-    .notice {
-      margin-top: 22px;
-      padding: 12px;
-      background: #fbbf2418;
-      border-radius: 12px;
-      color: #ffe6a0;
-      font-size: 14px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دوس بنزين 🏁</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;font-family:Tahoma,Arial;background:linear-gradient(135deg,#101827,#243b55);color:#fff}
+.card{width:100%;max-width:460px;padding:28px 22px;background:#ffffff12;border:1px solid #ffffff30;border-radius:22px;text-align:center}
+h1{font-size:30px}
+p{line-height:1.9;color:#e0e7ff}
+input,select,button{width:100%;padding:14px;margin-top:14px;border-radius:10px;font-size:16px}
+input,select{border:1px solid #ddd;background:white}
+button{border:0;background:#fbbf24;color:#222;font-weight:bold;cursor:pointer}
+#result{display:none;margin-top:20px;padding:16px;background:#ffffff18;border-radius:12px;line-height:2}
+#msg{white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
 </head>
 <body>
-  <main class="card">
-    <div class="flag">🏁 🛣️</div>
-    <h1>دوس بنزين</h1>
-    <div class="badge">تسجيل الفرق</div>
-    <p>
-      مستعد تبدأ رحلتك؟ 🚗💨<br>
-      هنا هتعرف فريقك ولونه والآية الخاصة بيك.
-    </p>
-    <div class="notice">
-      جاري تجهيز نظام التسجيل الآمن بحساب Google.
-    </div>
-  </main>
+<main class="card">
+<div style="font-size:48px">🏁 🛣️</div>
+<h1>دوس بنزين</h1>
+<p>سجّل واعرف فريقك ولونه والآية الخاصة بيك ❤️</p>
+<button id="login" onclick="login()">تسجيل الدخول بحساب Google</button>
+<div id="form" hidden>
+<p id="email"></p>
+<input id="name" placeholder="اكتب اسمك الرباعي" maxlength="120">
+<select id="gender">
+<option value="">اختار النوع</option>
+<option value="ولد">ولد</option>
+<option value="بنت">بنت</option>
+</select>
+<button onclick="register()">تسجيل</button>
+</div>
+<div id="msg"></div>
+<div id="result"></div>
+</main>
+<script>
+const API="https://script.google.com/macros/s/AKfycbxWUVdZw0SMKlvbReDx6-OTK42wy9GtpS28Ak7wNikJbQwTcirkeu-O1lW0hln9EIqa9g/exec";
+let sessionToken="",userEmail="";
+function login(){
+ document.getElementById("msg").textContent="جاري فتح تسجيل الدخول...";
+ location.href=API+"?action=login";
+}
+function exchange(code){
+ const frame=document.createElement("iframe");
+ frame.name="dbframe";frame.hidden=true;document.body.appendChild(frame);
+ const f=document.createElement("form");
+ f.method="POST";f.action=API;f.target="dbframe";f.hidden=true;
+ [["action","exchange"],["handoff",code]].forEach(([k,v])=>{
+  const i=document.createElement("input");i.name=k;i.value=v;f.appendChild(i);
+ });
+ document.body.appendChild(f);
+ window.addEventListener("message",function handler(e){
+  if(e.origin!==new URL(API).origin||!e.data||e.data.type!=="DB_RESPONSE")return;
+  window.removeEventListener("message",handler);
+  const r=e.data.data;
+  if(!r.success){document.getElementById("msg").textContent=r.message;return}
+  sessionToken=r.sessionToken;userEmail=r.email;
+  document.getElementById("login").hidden=true;
+  document.getElementById("form").hidden=false;
+  document.getElementById("email").textContent="الحساب: "+userEmail;
+  history.replaceState(null,"",location.pathname);
+ });
+ f.submit();
+}
+function register(){
+ const name=document.getElementById("name").value.trim();
+ const gender=document.getElementById("gender").value;
+ if(name.length<3||!gender){document.getElementById("msg").textContent="اكتب اسمك واختار النوع.";return}
+ const frame=document.querySelector("iframe")||document.createElement("iframe");
+ frame.name="dbframe";frame.hidden=true;if(!frame.parentNode)document.body.appendChild(frame);
+ const f=document.createElement("form");f.method="POST";f.action=API;f.target="dbframe";f.hidden=true;
+ const payload=JSON.stringify({name,gender,sessionToken});
+ [["action","register"],["payload",payload]].forEach(([k,v])=>{
+  const i=document.createElement("input");i.name=k;i.value=v;f.appendChild(i);
+ });
+ document.body.appendChild(f);
+ const msg=document.getElementById("msg");msg.textContent="جاري التسجيل...";
+ const handler=e=>{
+  if(e.origin!==new URL(API).origin||!e.data||e.data.type!=="DB_RESPONSE")return;
+  window.removeEventListener("message",handler);
+  const r=e.data.data;
+  if(!r.success){msg.textContent=r.message;return}
+  document.getElementById("form").hidden=true;
+  document.getElementById("result").style.display="block";
+  document.getElementById("result").textContent=
+   "تم التسجيل بنجاح ✓\nالاسم: "+r.name+"\nالفريق: "+r.team+
+   "\nاللون: "+r.color+"\nالآية: "+r.verse;
+  msg.textContent=r.emailSent?"تم إرسال النتيجة إلى بريدك.":"تم التسجيل، لكن تعذر إرسال البريد.";
+ };
+ window.addEventListener("message",handler);f.submit();
+}
+const params=new URLSearchParams(location.hash.slice(1));
+if(params.has("handoff"))exchange(params.get("handoff"));
+</script>
 </body>
 </html>
