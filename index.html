@@ -10,7 +10,13 @@
 body{
   margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;
   font-family:Tahoma,Arial,sans-serif;
-  background:linear-gradient(135deg,#101827,#243b55);color:#fff
+  background:#101827;color:#fff
+}
+body::before{
+  content:"";
+  position:fixed;inset:0;z-index:-1;
+  background:url("Fr%20Ephraim.jpeg") center/cover no-repeat;
+  opacity:.25
 }
 .card{
   width:100%;max-width:460px;padding:28px 22px;
