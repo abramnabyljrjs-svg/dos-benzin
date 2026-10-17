@@ -69,7 +69,6 @@ button.secondary{background:#ffffff25;color:#fff}
 <script>
 const API = "https://script.google.com/macros/s/AKfycbxWUVdZw0SMKlvbReDx6-OTK42wy9GtpS28Ak7wNikJbQwTcirkeu-O1lW0hln9EIqa9g/exec";
 
-// رسائل Apps Script تأتي من نطاقات googleusercontent.com أو script.google.com
 const ORIGIN_RE = /^https:\/\/([a-z0-9-]+\.)*(googleusercontent\.com|script\.google\.com)$/;
 
 let sessionToken = "";
@@ -144,22 +143,49 @@ function callApi(fields, timeoutMs){
 }
 
 // ---------- تسجيل الدخول ----------
-$("login").addEventListener("click", () => {
+async function startLogin(){
+  const btn = $("login");
+  btn.disabled = true;
   setMsg("جاري فتح تسجيل الدخول...");
-  location.href = API + "?action=login";
-});
 
-async function exchange(code){
+  try {
+    const r = await callApi({ action: "begin" });
+
+    if (!r || !r.success || !r.authUrl){
+      setMsg((r && r.message) || "تعذر بدء تسجيل الدخول.");
+      btn.disabled = false;
+      return;
+    }
+
+    try { sessionStorage.setItem("db_state", r.state); } catch (_) {}
+
+    location.href = r.authUrl;
+  } catch (err) {
+    setMsg(err.message);
+    btn.disabled = false;
+  }
+}
+
+$("login").addEventListener("click", startLogin);
+
+// إكمال الدخول بعد الرجوع من Google
+async function finishLogin(code, state){
   $("login").hidden = true;
   setMsg("جاري إكمال تسجيل الدخول...");
 
-  // نمسح الرمز من الرابط فورًا (يُستخدم مرة واحدة فقط)
-  history.replaceState(null, "", location.pathname + location.search);
+  let saved = null;
+  try { saved = sessionStorage.getItem("db_state"); sessionStorage.removeItem("db_state"); } catch (_) {}
+
+  if (saved && saved !== state){
+    setMsg("طلب الدخول غير صالح. اضغط تسجيل الدخول مرة أخرى.");
+    $("login").hidden = false;
+    return;
+  }
 
   try {
-    const r = await callApi({ action: "exchange", handoff: code });
+    const r = await callApi({ action: "login", code: code, state: state });
 
-    if (!r || !r.success) {
+    if (!r || !r.success){
       setMsg((r && r.message) || "تعذر تسجيل الدخول.");
       $("login").hidden = false;
       return;
@@ -268,10 +294,17 @@ $("another").addEventListener("click", () => {
   setMsg("");
 });
 
-// ---------- عند فتح الصفحة: هل رجعنا من تسجيل الدخول؟ ----------
-const hashParams = new URLSearchParams(location.hash.slice(1));
-if (hashParams.has("handoff")){
-  exchange(hashParams.get("handoff"));
+// ---------- عند فتح الصفحة: هل رجعنا من Google؟ ----------
+const q = new URLSearchParams(location.search);
+
+if (q.has("code") && q.has("state")){
+  const code = q.get("code");
+  const state = q.get("state");
+  history.replaceState(null, "", location.pathname);
+  finishLogin(code, state);
+} else if (q.has("error")){
+  history.replaceState(null, "", location.pathname);
+  setMsg("تم إلغاء تسجيل الدخول. اضغط الزر للمحاولة مرة أخرى.");
 }
 </script>
 
